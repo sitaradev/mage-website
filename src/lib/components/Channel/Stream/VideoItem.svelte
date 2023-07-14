@@ -1,7 +1,7 @@
 <script lang="ts">
 	import WHEPClient from '$lib/WHEPClient'
 	import WHIPClient from '$lib/WHIPClient'
-	import { onMount } from 'svelte'
+	import { onMount, onDestroy } from 'svelte'
 	import { page } from '$app/stores'
 	import IconChatMod from '$lib/assets/icons/chat/IconChatMod.svelte'
 	import IconChatGuest from '$lib/assets/icons/chat/IconChatGuest.svelte'
@@ -13,6 +13,7 @@
 	import { is_feature_stats_enabled } from '$lib/stores/remoteConfigStore'
 
 	export let video: any, channel: any
+	let subscriptions:any = []
 
 	let role = '',
 		coloredRole: any = {},
@@ -228,26 +229,35 @@
 		if (audioElement) {
 			handleAudioChanges()
 		}
+
+		// subscriptions
+
+		const sub1 = is_sharing_screen.subscribe((value) => {
+			//prevents duplicate calls from WHIPClient
+			if (value === false && screenElement?.srcObject) {
+				screenWhip?.disconnectStream()
+			}
+		})
+
+		const sub2 = is_sharing_webcam.subscribe((value) => {
+			if (value === false && webcamElement?.srcObject) {
+				webcamWhip?.disconnectStream()
+			}
+		})
+
+		const sub3 = is_sharing_audio.subscribe((value) => {
+			if (value === false && audioElement?.srcObject) {
+				audioWhip?.disconnectStream()
+			}
+		})
+		subscriptions.push(sub1, sub2, sub3)
 		isMounted = true
 	})
 
-	is_sharing_screen.subscribe((value) => {
-		//prevents duplicate calls from WHIPClient
-		if (value === false && screenElement?.srcObject) {
-			screenWhip?.disconnectStream()
-		}
-	})
-
-	is_sharing_webcam.subscribe((value) => {
-		if (value === false && webcamElement?.srcObject) {
-			webcamWhip?.disconnectStream()
-		}
-	})
-
-	is_sharing_audio.subscribe((value) => {
-		if (value === false && audioElement?.srcObject) {
-			audioWhip?.disconnectStream()
-		}
+	onDestroy(() => {
+		subscriptions.forEach((subs:any) => {
+			subs()
+		})
 	})
 
 	const toggleBan = () => {
