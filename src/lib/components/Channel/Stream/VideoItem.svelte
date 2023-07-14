@@ -70,9 +70,9 @@
 		handleAudioChanges()
 	}
 
-	$: if ($is_feature_stats_enabled && (isScreenLive || isWebcamLive)) {
-		toggleTimer()
-	}
+	// $: if ($is_feature_stats_enabled && (isScreenLive || isWebcamLive)) {
+	// 	toggleTimer()
+	// }
 
 	$: animate = isWebcamFocused ? '' : 'transition-all'
 
@@ -142,7 +142,7 @@
 		} else {
 			switch (trackType) {
 				case 'screen':
-					if (video.screen) {
+					if (video.screen && screenElement) {
 						screenWhep = new WHEPClient(
 							video.screen.webRTCPlayback.url,
 							screenElement,
@@ -157,7 +157,7 @@
 					}
 					break
 				case 'webcam':
-					if (video.webcam) {
+					if (video.webcam && webcamElement) {
 						webcamWhep = new WHEPClient(
 							video.webcam.webRTCPlayback.url,
 							webcamElement,
@@ -170,7 +170,7 @@
 					}
 					break
 				case 'audio':
-					if (video.audio) {
+					if (video.audio && audioElement) {
 						audioWhep = new WHEPClient(
 							video.audio.webRTCPlayback.url,
 							audioElement,
@@ -200,10 +200,6 @@
 
 	onMount(() => {
 		isGuest = channel?.guests?.includes(video._id)
-		screenElement = document.getElementById(`screen-${video._id}`) as HTMLVideoElement
-		webcamElement = document.getElementById(`webcam-${video._id}`) as HTMLVideoElement
-		audioElement = document.getElementById(`audio-${video._id}`) as HTMLAudioElement
-
 		if (screenElement) {
 			screenElement.addEventListener('dblclick', (event: any) => {
 				if (document.fullscreenElement) {
@@ -230,34 +226,22 @@
 			handleAudioChanges()
 		}
 
-		// subscriptions
-
-		const sub1 = is_sharing_screen.subscribe((value) => {
-			//prevents duplicate calls from WHIPClient
-			if (value === false && screenElement?.srcObject) {
-				screenWhip?.disconnectStream()
-			}
-		})
-
-		const sub2 = is_sharing_webcam.subscribe((value) => {
-			if (value === false && webcamElement?.srcObject) {
-				webcamWhip?.disconnectStream()
-			}
-		})
-
-		const sub3 = is_sharing_audio.subscribe((value) => {
-			if (value === false && audioElement?.srcObject) {
-				audioWhip?.disconnectStream()
-			}
-		})
-		subscriptions.push(sub1, sub2, sub3)
-		isMounted = true
+	is_sharing_screen.subscribe((value) => {
+		if (value === false) {
+			screenWhip?.disconnectStream()
+		}
 	})
 
-	onDestroy(() => {
-		subscriptions.forEach((subs:any) => {
-			subs()
-		})
+	is_sharing_webcam.subscribe((value) => {
+		if (value === false) {
+			webcamWhip?.disconnectStream()
+		}
+	})
+
+	is_sharing_audio.subscribe((value) => {
+		if (value === false) {
+			audioWhip?.disconnectStream()
+		}
 	})
 
 	const toggleBan = () => {
@@ -346,7 +330,7 @@
 					{formattedTime}
 				</span>
 			{/if}
-			<video id={`screen-${video._id}`} autoplay muted class="rounded-md w-full h-full" />
+			<video bind:this={screenElement} autoplay muted class="rounded-md w-full h-full" />
 			<div
 				use:draggable={{ bounds: 'parent' }}
 				on:mousedown={onMouseDown}
@@ -354,9 +338,9 @@
 				class={animate +
 					' absolute ' +
 					(!isScreenLive ? 'w-full bottom-0 left-0 h-full' : 'w-1/4 bottom-0 right-0')}>
-				<video id={`webcam-${video._id}`} autoplay muted class="rounded-md h-full w-full" />
+				<video bind:this={webcamElement} autoplay muted class="rounded-md h-full w-full" />
 			</div>
-			<video id={`audio-${video._id}`} autoplay muted class="rounded-md w-0 h-0" />
+			<video bind:this={audioElement} autoplay muted class="rounded-md w-0 h-0" />
 			<div class="absolute left-2 bottom-2 rounded-md dropdown">
 				<label
 					tabindex="0"
